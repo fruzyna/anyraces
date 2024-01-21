@@ -37,6 +37,10 @@ th, td {
     color: goldenrod;
 }
 
+#disclaimer {
+    font-size: small;
+}
+
 #notes {
     margin: 15px;
     font-size: small;

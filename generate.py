@@ -69,7 +69,8 @@ def generate_document(file: str, title: str, races: list, tags: list, series: li
         f.write(f'<div class="links">{tags}</div>')
 
         # build the main table
-        f.write(f'<table><tr><th>Race</th><th>Series</th><th>Date</th><th>Time (CT)</th><th>Channel</th></tr>{rows}</table>')
+        f.write(f'<div id="disclaimer">All times are US Central Time</div>')
+        f.write(f'<table><tr><th>Race</th><th>Series</th><th>Date</th><th>Time</th><th>Channel</th></tr>{rows}</table>')
 
         # add some note to the bottom of the page
         f.write('<div id="notes">Data sourced from ESPN, Indycar, IMSA, and ARCA<br>')
