@@ -31,7 +31,7 @@ class Series(object):
 class Race(object):
 
     def __init__(self, name: str, series: Series, time: datetime, channel: str):
-        self.name = name
+        self.name = name.replace("’", "'")
         self.time = time
         self.channel = channel.replace(' ', '')
         self.series = series.name
