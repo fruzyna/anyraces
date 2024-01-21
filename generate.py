@@ -5,6 +5,7 @@ DICTIONARY = {
     'NCS': 'NASCAR Cup Series',
     'NXS': 'NASCAR Xfinity Series',
     'NCTS': 'NASCAR Craftsman Truck Series',
+    'ARCA': 'ARCA Menards Series',
     'INDY': 'NTT IndyCar Series',
     'NXT': 'Indy NXT Series',
     'F1': 'Formula One',
@@ -71,7 +72,7 @@ def generate_document(file: str, title: str, races: list, tags: list, series: li
         f.write(f'<table><tr><th>Race</th><th>Series</th><th>Date</th><th>Time (CT)</th><th>Channel</th></tr>{rows}</table>')
 
         # add some note to the bottom of the page
-        f.write('<div id="notes">Data sourced from ESPN, Indycar, and IMSA<br>')
+        f.write('<div id="notes">Data sourced from ESPN, Indycar, IMSA, and ARCA<br>')
         f.write(f'Updated every Tuesday, last updated {datetime.now().strftime("%m/%d %H:%M")}<br>')
         f.write('<a href="https://github.com/fruzyna/anyraces">Open Source on Github</a></div>')
 

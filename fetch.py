@@ -3,6 +3,9 @@ from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
         
 
+HEADERS = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"}
+
+
 class Series(object):
 
     def __init__(self, name: str, schedule_url: str, tags=[]):
@@ -21,6 +24,8 @@ class Series(object):
             self.races = process_indy(self.schedule_url, self)
         elif 'imsa.com' in self.schedule_url:
             self.races = process_imsa(self.schedule_url, self)
+        elif 'arcaracing.com' in self.schedule_url:
+            self.races = process_arca(self.schedule_url, self)
 
 
 class Race(object):
@@ -44,6 +49,7 @@ series = [
     Series('NCS', 'https://www.espn.com/racing/schedule', ['NASCAR', 'Stock', 'Premier']),
     Series('NXS', 'https://www.espn.com/racing/schedule/_/series/xfinity', ['NASCAR', 'Stock']),
     Series('NCTS', 'https://www.espn.com/racing/schedule/_/series/camping', ['NASCAR', 'Stock']),
+    Series('ARCA', 'https://www.arcaracing.com/2024-race-broadcast-schedule/', ['Stock']),
     Series('INDY', 'https://www.espn.com/racing/schedule/_/series/indycar', ['IndyCar', 'Open-Wheel', 'Premier']),
     Series('NXT', 'https://www.indycar.com/INDYNXT/Schedule', ['IndyCar', 'Open-Wheel']),
     Series('F1', 'https://www.espn.com/f1/schedule', ['Grand-Prix', 'Open-Wheel', 'Premier']),
@@ -155,7 +161,7 @@ def process_imsa(url: str, series: Series) -> list:
     races = []
 
     # get rows of table
-    req = Request(url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"})
+    req = Request(url, headers=HEADERS)
     page = urlopen(req)
     html = page.read().decode("utf-8")
     soup = BeautifulSoup(html, "html.parser")
@@ -238,6 +244,56 @@ def process_indy(url: str, series: Series) -> list:
 
         # combine into EventBot compatible dictionary
         races.append(Race(name, series, dt, tv))
+
+    return races
+
+
+def process_arca(url: str, series: Series) -> list:
+    """Fetch race schedule from espn.com/racing"""
+    races = []
+
+    # get rows of table
+    req = Request(url, headers=HEADERS)
+    page = urlopen(req)
+    html = page.read().decode("utf-8")
+    soup = BeautifulSoup(html, "html.parser")
+    rows = soup.table.find_all("tr")
+    rows.pop(0)
+
+    for row in rows:
+        cells = row.find_all("td")
+        if len(cells) >= 5:
+            # combine date and time, then interpret
+            date = cells[0].string.replace('Sept', 'Sep')
+            time = cells[3].string.replace('*', '')
+            if time == 'TBA':
+                time = '12:00 pm ET'
+
+            if ':' not in time:
+                time = time.replace(' p.m.', ':00 pm')
+
+            date = f'{date} {time}'.replace('.', '')
+            try:
+                dt = datetime.strptime(date, '%A, %b %d %I:%M %p ET')
+            except ValueError:
+                dt = datetime.strptime(date, '%A, %B %d %I:%M %p ET')
+
+            # use track as race name
+            race = cells[1].string
+
+            # add the current year and remove an hour for central time
+            dt = dt.replace(year=datetime.now().year)
+            dt = dt - timedelta(hours=1)
+
+            tv = cells[4].string
+            stream = cells[5].string
+            if tv == '—':
+                tv = stream
+
+            races.append(Race(race, series, dt, tv))
+
+            if tv != stream and stream != 'Fox Sports App':
+                races[-1].channel += ' ' + stream.replace(' / Fox Sports App', '')
 
     return races
 

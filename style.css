@@ -21,11 +21,11 @@ th, td {
     text-align: center;
 }
 
-.fox, .fs1, .cnbc {
+.fox, .fs1, .fs2, .cnbc {
     color: navy;
 }
 
-.espn, .espn, .imsatv {
+.espn, .espn, .imsatv, .floracing {
     color: red;
 }
 
