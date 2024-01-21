@@ -82,6 +82,17 @@ function update_time()
             date.innerText = `${local.getMonth()}/${local.getDate()}`
             time.innerText = `${local.getHours()}:${local.getMinutes().padStart(2, '0')}`
         }
+
+        // highlight races starting within an hour or started within the last 3 hours
+        let delta = (now - local) / (1000 * 60 * 60)
+        if (delta > -1 && delta < 0)
+        {
+            el.getElementsByClassName('race')[0].classList.add('next')
+        }
+        if (delta > 0 && delta < 3)
+        {
+            el.getElementsByClassName('race')[0].classList.add('live')
+        }
     }
 }
 

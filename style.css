@@ -16,6 +16,32 @@ table {
     background-color: lightgray;
 }
 
+.next {
+    animation: flash-yellow 2s linear infinite;
+}
+
+@keyframes flash-yellow {
+    from, to {
+        background-color: yellow;
+    }
+    50% {
+        background-color: unset;
+    }
+}
+
+.live {
+    animation: flash-red 2s linear infinite;
+}
+
+@keyframes flash-red {
+    from, to {
+        background-color: red;
+    }
+    50% {
+        background-color: unset;
+    }
+}
+
 th, td {
     padding: 3px 10px;
     text-align: center;
