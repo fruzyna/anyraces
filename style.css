@@ -1,0 +1,42 @@
+body {
+    text-align: center;
+}
+
+.links > a {
+    display: inline-block;
+    margin: 5px;
+}
+
+table {
+    margin: auto;
+}
+
+.gray {
+    background-color: lightgray;
+}
+
+th, td {
+    padding: 3px 15px;
+    text-align: center;
+}
+
+.fox, .fs1, .cnbc {
+    color: navy;
+}
+
+.espn, .espn, .imsatv {
+    color: red;
+}
+
+.usa {
+    color: crimson;
+}
+
+.peacock, .nbc {
+    color: goldenrod;
+}
+
+#notes {
+    margin: 15px;
+    font-size: small;
+}
