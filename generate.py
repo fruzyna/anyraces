@@ -25,7 +25,7 @@ class Race(object):
 
     def build_row(self, class_name: str) -> str:
         """Builds an HTML table-row for the race. An additional classname can be pased in."""
-        channel = ' '.join([f'<span class="{ch.replace('?', '')}">{ch}</span>' for ch in self.channel.split(' ')])
+        channel = ' '.join([f'<span class="{ch.replace("?", "")}">{ch}</span>' for ch in self.channel.split(' ')])
         title = DICTIONARY[self.series] if self.series in DICTIONARY else ''
         return f'<tr class="row {self.tags} {class_name}"><td class="race">{self.name}</td><td class="series {self.series}" title="{title}">{self.series}</td><td class="date">{self.date}</td><td class="time">{self.time}</td><td class="channel">{channel}</td></tr>'
 
@@ -57,7 +57,7 @@ def generate_document(file: str, title: str, races: list, tags: list, series: li
         f.write(f'<h1>Any <span id="tag"></span>Races This {title}?</h1>')
 
         # add a row of date range links
-        f.write(f'<div class="links">{build_link('This Week', '/week.html')}{build_link('This Month', '/month.html')}{build_link('This Year', '/')}</div>')
+        f.write(f'<div class="links">{build_link("This Week", "/week.html")}{build_link("This Month", "/month.html")}{build_link("This Year", "/")}</div>')
 
         # add a row of series links
         series = ''.join([build_tag(l, 'series') for l in series])
@@ -72,7 +72,7 @@ def generate_document(file: str, title: str, races: list, tags: list, series: li
 
         # add some note to the bottom of the page
         f.write('<div id="notes">Data sourced from ESPN, Indycar, and IMSA<br>')
-        f.write(f'Updated every Tuesday, last updated {datetime.now().strftime('%m/%d %H:%M')}<br>')
+        f.write(f'Updated every Tuesday, last updated {datetime.now().strftime("%m/%d %H:%M")}<br>')
         f.write('<a href="https://github.com/fruzyna/anyraces">Open Source on Github</a></div>')
 
         # load the JS last so it can access the table
