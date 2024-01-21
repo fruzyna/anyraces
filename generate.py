@@ -53,7 +53,7 @@ def generate_document(file: str, title: str, races: list, tags: list, series: li
     rows = '\n'.join([r.build_row('gray' if i % 2 == 0 else '') for i, r in enumerate(races)])
 
     with open(file, 'w') as f:
-        f.write(f'<html><head><title>Any Races This {title}?</title><link rel="stylesheet" type="text/css" href="style.css"></head><body>')
+        f.write(f'<html><head><title>Any Races This {title}?</title><link rel="stylesheet" type="text/css" href="style.css"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"></head><body>')
         f.write(f'<h1>Any <span id="tag"></span>Races This {title}?</h1>')
 
         # add a row of date range links
