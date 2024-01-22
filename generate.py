@@ -13,6 +13,17 @@ DICTIONARY = {
     'PILOT': 'IMSA Michelin Pilot Challenge'
 }
 
+HEADERS = """<link rel="stylesheet" type="text/css" href="style.css">
+             <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+             <meta http-equiv="Content-Type" content="text/html; charset=utf-8">"""
+DISCLAIMER = '<div id="disclaimer">All times are US Central Time</div>'
+TABLE_HEADER = '<tr><th>Race</th><th>Series</th><th>Date</th><th>Time</th><th>Channel</th></tr>'
+LINKS = '<div class="links"><a href="/Week.html">This Week</a><a href="/Month.html">This Month</a><a href="/Year.html">This Year</a></div>'
+NOTES = f"""<div id="notes">Data sourced from ESPN, Indycar, IMSA, and ARCA<br>
+                           Updated every Tuesday, last updated {datetime.now().strftime("%m/%d %H:%M")}<br>
+                           <a href="https://github.com/fruzyna/anyraces">Open Source on Github</a></div>"""
+FOOTERS = '<script src="script.js"></script>'
+
 
 class Race(object):
 
@@ -24,11 +35,11 @@ class Race(object):
         self.channel = values[4]
         self.tags = values[5]
 
-    def build_row(self, class_name: str) -> str:
+    def build_row(self) -> str:
         """Builds an HTML table-row for the race. An additional classname can be pased in."""
         channel = ' '.join([f'<span class="{ch.replace("?", "")}">{ch}</span>' for ch in self.channel.split(' ')])
         title = DICTIONARY[self.series] if self.series in DICTIONARY else ''
-        return f'<tr class="row {self.tags} {class_name}"><td class="race">{self.name}</td><td class="series {self.series}" title="{title}">{self.series}</td><td class="date">{self.date}</td><td class="time">{self.time}</td><td class="channel">{channel}</td></tr>'
+        return f'<tr class="row {self.tags}"><td class="race">{self.name}</td><td class="series {self.series}" title="{title}">{self.series}</td><td class="date">{self.date}</td><td class="time">{self.time}</td><td class="channel">{channel}</td></tr>'
 
     @property
     def datetime(self) -> datetime:
@@ -37,48 +48,41 @@ class Race(object):
         return datetime.strptime(f'{now.year}/{self.date} {self.time}', '%Y/%m/%d %H:%M')
 
 
-def build_link(name: str, href: str):
-    """Builds an HTML link to a given URL."""
-    return f'<a href="{href}">{name}</a>'
-
-
-def build_tag(tag: str, query='tag') -> str:
+def build_tag(span: str, tag: str) -> str:
     """Builds an HTML link to query a given tag."""
     title = DICTIONARY[tag] if tag in DICTIONARY else ''
-    return f'<a href="?{query}={tag}" title="{title}">{tag}</a>'
+    return f'<a href="/{tag}-{span}.html" title="{title}">{tag}</a>'
 
 
-def generate_document(file: str, title: str, races: list, tags: list, series: list):
+def generate_document(file: str, span: str, races: list, tags: str, series: str, tag=''):
     """Generates an HTML document from a list of races."""
     # convert the list of races to a HTML string of table-rows
-    rows = '\n'.join([r.build_row('gray' if i % 2 == 0 else '') for i, r in enumerate(races)])
+    rows = '\n'.join([r.build_row() for r in races])
+    if tag:
+        tag += ' '
+
+    title = f'Any {tag}Races This {span}?'
 
     with open(file, 'w') as f:
-        f.write(f'<html><head><title>Any Races This {title}?</title><link rel="stylesheet" type="text/css" href="style.css"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"></head><body>')
-        f.write(f'<h1>Any <span id="tag"></span>Races This {title}?</h1>')
+        f.write(f'<html><head><title>{title}</title>{HEADERS}</head><body>')
+        f.write(f'<h1>{title}</h1>')
 
         # add a row of date range links
-        f.write(f'<div class="links">{build_link("This Week", "/week.html")}{build_link("This Month", "/month.html")}{build_link("This Year", "/")}</div>')
+        f.write(LINKS)
 
-        # add a row of series links
-        series = ''.join([build_tag(l, 'series') for l in series])
-        f.write(f'<div class="links">{series}</div>')
-
-        # add a row of tag links
-        tags = ''.join([build_tag(t) for t in tags])
-        f.write(f'<div class="links">{tags}</div>')
+        # add a row of series and tag links
+        f.write(series)
+        f.write(tags)
 
         # build the main table
-        f.write(f'<div id="disclaimer">All times are US Central Time</div>')
-        f.write(f'<table><tr><th>Race</th><th>Series</th><th>Date</th><th>Time</th><th>Channel</th></tr>{rows}</table>')
+        f.write(DISCLAIMER)
+        f.write(f'<table>{TABLE_HEADER}{rows}</table>')
 
-        # add some note to the bottom of the page
-        f.write('<div id="notes">Data sourced from ESPN, Indycar, IMSA, and ARCA<br>')
-        f.write(f'Updated every Tuesday, last updated {datetime.now().strftime("%m/%d %H:%M")}<br>')
-        f.write('<a href="https://github.com/fruzyna/anyraces">Open Source on Github</a></div>')
+        # add some notes to the bottom of the page
+        f.write(NOTES)
 
         # load the JS last so it can access the table
-        f.write('</body><script src="script.js"></script></html>')
+        f.write(f'</body>{FOOTERS}</html>')
 
 
 if __name__ == '__main__':
@@ -106,7 +110,31 @@ if __name__ == '__main__':
     tags.sort()
     series.sort()
 
+    # add a row of series and tag links
+    series_week = f'<div class="links">{"".join([build_tag("Week", l) for l in series])}</div>'
+    tags_week = f'<div class="links">{"".join([build_tag("Week", t) for t in tags])}</div>'
+    series_month = f'<div class="links">{"".join([build_tag("Month", l) for l in series])}</div>'
+    tags_month = f'<div class="links">{"".join([build_tag("Month", t) for t in tags])}</div>'
+    series_year = f'<div class="links">{"".join([build_tag("Year", l) for l in series])}</div>'
+    tags_year = f'<div class="links">{"".join([build_tag("Year", t) for t in tags])}</div>'
+
     # generate each HTML document
-    generate_document('index.html', 'Year', races, tags, series)
-    generate_document('week.html', 'Week', this_week, tags, series)
-    generate_document('month.html', 'Month', this_month, tags, series)
+    generate_document('Year.html', 'Year', races, tags_year, series_year)
+    generate_document('Week.html', 'Week', this_week, tags_week, series_week)
+    generate_document('Month.html', 'Month', this_month, tags_month, series_month)
+
+    for s in series:
+        filt = lambda r: r.series == s
+        series_str = f'<div class="links">{"".join([build_tag(s, l) for l in series])}</div>'
+        tags_str = f'<div class="links">{"".join([build_tag(s, t) for t in tags])}</div>'
+        generate_document(f'{s}-Year.html', 'Year', list(filter(filt, races)), tags_year, series_year, s)
+        generate_document(f'{s}-Week.html', 'Week', list(filter(filt, this_week)), tags_week, series_week, s)
+        generate_document(f'{s}-Month.html', 'Month', list(filter(filt, this_month)), tags_month, series_month, s)
+
+    for tag in tags:
+        filt = lambda r: tag in r.tags
+        series_str = f'<div class="links">{"".join([build_tag(tag, l) for l in series])}</div>'
+        tags_str = f'<div class="links">{"".join([build_tag(tag, t) for t in tags])}</div>'
+        generate_document(f'{tag}-Year.html', 'Year', list(filter(filt, races)), tags_year, series_year, tag)
+        generate_document(f'{tag}-Week.html', 'Week', list(filter(filt, this_week)), tags_week, series_week, tag)
+        generate_document(f'{tag}-Month.html', 'Month', list(filter(filt, this_month)), tags_month, series_month, tag)
