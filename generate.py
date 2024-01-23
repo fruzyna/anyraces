@@ -101,8 +101,8 @@ if __name__ == '__main__':
 
     # filter the races date
     now = datetime.now()
-    this_week = list(filter(lambda r: r.datetime > now and r.datetime < now + timedelta(weeks=1), races))
     this_month = list(filter(lambda r: r.datetime > now and r.datetime < now + timedelta(weeks=5), races))
+    this_week = list(filter(lambda r: r.datetime < now + timedelta(weeks=1), this_month))
 
     # find all unique tags and series in the races
     tags = []
