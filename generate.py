@@ -1,5 +1,9 @@
 from datetime import datetime, timedelta
+from os.path import exists
 
+
+RACES_FILE = 'races.csv'
+MANUAL_FILE = 'manual.csv'
 
 DICTIONARY = {
     'NCS': 'NASCAR Cup Series',
@@ -24,6 +28,8 @@ NOTES = f"""<div id="notes">Data sourced from ESPN, Indycar, IMSA, and ARCA<br>
                            <a href="https://github.com/fruzyna/anyraces">Open Source on Github</a></div>"""
 FOOTERS = '<script src="script.js"></script>'
 
+YEAR = now = datetime.now().year
+
 
 class Race(object):
 
@@ -34,18 +40,13 @@ class Race(object):
         self.time = values[3]
         self.channel = values[4]
         self.tags = values[5]
+        self.datetime = datetime.strptime(f'{YEAR}/{self.date} {self.time}', '%Y/%m/%d %H:%M')
 
     def build_row(self) -> str:
         """Builds an HTML table-row for the race. An additional classname can be pased in."""
         channel = ' '.join([f'<span class="{ch.replace("?", "")}">{ch}</span>' for ch in self.channel.split(' ')])
         title = DICTIONARY[self.series] if self.series in DICTIONARY else ''
         return f'<tr class="row {self.tags}"><td class="race">{self.name}</td><td class="series {self.series}" title="{title}">{self.series}</td><td class="date">{self.date}</td><td class="time">{self.time}</td><td class="channel">{channel}</td></tr>'
-
-    @property
-    def datetime(self) -> datetime:
-        """Convert the date and time to a Python datetime."""
-        now = datetime.now()
-        return datetime.strptime(f'{now.year}/{self.date} {self.time}', '%Y/%m/%d %H:%M')
 
 
 def build_tag(span: str, tag: str) -> str:
@@ -87,8 +88,16 @@ def generate_document(file: str, span: str, races: list, tags: str, series: str,
 
 if __name__ == '__main__':
     # read in the CSV file of races
-    with open('races.csv', 'r') as f:
+    with open(RACES_FILE, 'r') as f:
         races = [Race(r.split(',')) for r in f.readlines()]
+
+    # read in an optional additional CSV file of manually added races
+    if exists(MANUAL_FILE):    
+        with open(MANUAL_FILE, 'r') as f:
+            races += [Race(r.split(',')) for r in f.readlines()]
+
+    # sort the races by time
+    races.sort(key=lambda r: r.datetime)
 
     # filter the races date
     now = datetime.now()
