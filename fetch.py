@@ -52,10 +52,13 @@ series = [
     Series('ARCA', 'https://www.arcaracing.com/2024-race-broadcast-schedule/', ['Stock']),
     Series('INDY', 'https://www.espn.com/racing/schedule/_/series/indycar', ['IndyCar', 'Open-Wheel', 'Premier']),
     Series('NXT', 'https://www.indycar.com/INDYNXT/Schedule', ['IndyCar', 'Open-Wheel']),
-    Series('F1', 'https://www.espn.com/f1/schedule', ['Grand-Prix', 'Open-Wheel', 'Premier']),
+    #Series('F1', 'https://www.espn.com/f1/schedule', ['Grand-Prix', 'Open-Wheel', 'Premier']),
+    Series('F1', 'https://www.espn.com/racing/schedule/_/series/f1', ['Grand-Prix', 'Open-Wheel', 'Premier']),
     Series('WTSC', 'https://www.imsa.com/weathertech/tv-streaming-schedule/', ['IMSA', 'GT', 'Prototype', 'Premier']),
     Series('PILOT', 'https://www.imsa.com/michelinpilotchallenge/tv-streaming-schedule/', ['IMSA', 'GT', 'Touring'])
 ]
+
+YEAR = now = datetime.now().year
 
 
 def process_espn_racing(url: str, series: Series) -> list:
@@ -64,14 +67,14 @@ def process_espn_racing(url: str, series: Series) -> list:
 
     # get rows of table
     page = urlopen(url)
-    html = page.read().decode("utf-8")
+    html = page.read().decode('latin-1')
     soup = BeautifulSoup(html, "html.parser")
     rows = soup.table.find_all("tr")
     rows.pop(0)
 
     for row in rows:
         cells = row.find_all("td")
-        if len(cells) >= 4:
+        if len(cells) >= 2:
             # combine date and time, then interpret
             date = ''
             for s in cells[0].strings:
@@ -84,17 +87,25 @@ def process_espn_racing(url: str, series: Series) -> list:
                 if date.endswith('TBD'):
                     date = date.replace('TBD', '12:00 PM ET')
 
-                dt = datetime.strptime(date.replace('.', ''), '%a, %b %d %I:%M %p ET')
+                dt = datetime.strptime(f'{YEAR} {date.replace(".", "")}', '%Y %a, %b %d %I:%M %p ET')
 
                 # use track as race name
                 race = ''
+                skip = False
                 for s in cells[1].strings:
                     if not race:
                         race = s
                     # interpret postponed dates
                     elif s.startswith("**Race postponed to "):
                         date = s[s.index(' to ')+4:]
-                        dt = datetime.strptime(date, '%B %d at %I:%M %p')
+                        dt = datetime.strptime(f'{YEAR} {date}', '%Y %B %d at %I:%M %p')
+                    elif 'Practice' in s or 'Qualifying' in s or 'Shootout' in s:
+                        skip = True
+                    elif 'Sprint' in s:
+                        race += ' (Sprint)'
+
+                # remove an hour for central time
+                dt = dt - timedelta(hours=1)
 
                 # remove annoying extract cup series text
                 if race.startswith('NASCAR') and ' at ' in race:
@@ -104,18 +115,18 @@ def process_espn_racing(url: str, series: Series) -> list:
                     start = race.upper().index('SERIES') + 7
                     race = race[start:]
 
-                # add the current year and remove an hour for central time
-                dt = dt.replace(year=datetime.now().year)
-                dt = dt - timedelta(hours=1)
-
-                tv = cells[2].string
-                if tv is None:
-                    tv = 'Unknown'
-                elif tv == 'USA Net':
-                    tv = 'USA'
+                if len(cells) >= 3:
+                    tv = cells[2].string
+                    if tv is None:
+                        tv = ''
+                    elif tv == 'USA Net':
+                        tv = 'USA'
+                else:
+                    tv = ''
 
                 # combine into EventBot compatible dictionary
-                races.append(Race(race, series, dt, tv))
+                if not skip:
+                    races.append(Race(race, series, dt, tv))
 
     return races
 
@@ -136,8 +147,7 @@ def process_espn_f1(url: str, series: Series) -> list:
         # interpret date time
         date = cells[2].string
         if " - " in date:
-            dt = datetime.strptime(date, '%b %d - %I:%M %p')
-            dt = dt.replace(year=datetime.now().year)
+            dt = datetime.strptime(f'{YEAR} {date}', '%Y %b %d - %I:%M %p')
             dt = dt - timedelta(hours=1)
 
             # interpret race name
@@ -226,10 +236,11 @@ def process_indy(url: str, series: Series) -> list:
         time = item.find('span', class_='timeEst').string.replace('ET', '').strip()
         # use noon if time is not yet set
         if time == 'TBD':
-            dt = datetime.strptime(f"{month} {day} {datetime.now().year} 12:00 PM", '%b %d %Y %I:%M %p')
+            dt = datetime.strptime(f"{month} {day} {YEAR} 12:00 PM", '%b %d %Y %I:%M %p')
         else:
-            dt = datetime.strptime(f"{month} {day} {datetime.now().year} {time}", '%b %d %Y %I:%M %p')
-            dt = dt - timedelta(hours=1)
+            dt = datetime.strptime(f"{month} {day} {YEAR} {time}", '%b %d %Y %I:%M %p')
+
+        dt = dt - timedelta(hours=1)
 
         # determine TV channel by image
         tvimg = item.find("div", class_='schedule-list__broadcast-logos').a['href'].upper()
@@ -274,16 +285,15 @@ def process_arca(url: str, series: Series) -> list:
 
             date = f'{date} {time}'.replace('.', '')
             try:
-                dt = datetime.strptime(date, '%A, %b %d %I:%M %p ET')
+                dt = datetime.strptime(f'{YEAR} {date}', '%Y %A, %b %d %I:%M %p ET')
             except ValueError:
-                dt = datetime.strptime(date, '%A, %B %d %I:%M %p ET')
+                dt = datetime.strptime(f'{YEAR} {date}', '%Y %A, %B %d %I:%M %p ET')
+
+            # remove an hour for central time
+            dt = dt - timedelta(hours=1)
 
             # use track as race name
             race = cells[1].string
-
-            # add the current year and remove an hour for central time
-            dt = dt.replace(year=datetime.now().year)
-            dt = dt - timedelta(hours=1)
 
             tv = cells[4].string
             stream = cells[5].string
