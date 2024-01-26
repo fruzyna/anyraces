@@ -3,7 +3,6 @@ from os.path import exists
 
 
 RACES_FILE = 'races.csv'
-MANUAL_FILE = 'manual.csv'
 
 DICTIONARY = {
     'NCS': 'NASCAR Cup Series',
@@ -90,11 +89,6 @@ if __name__ == '__main__':
     # read in the CSV file of races
     with open(RACES_FILE, 'r') as f:
         races = [Race(r.split(',')) for r in f.readlines()]
-
-    # read in an optional additional CSV file of manually added races
-    if exists(MANUAL_FILE):    
-        with open(MANUAL_FILE, 'r') as f:
-            races += [Race(r.split(',')) for r in f.readlines()]
 
     # sort the races by time
     races.sort(key=lambda r: r.datetime)

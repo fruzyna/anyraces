@@ -1,7 +1,8 @@
 from urllib.request import urlopen, Request
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
-        
+import glob
+
 
 HEADERS = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"}
 
@@ -318,6 +319,12 @@ if __name__ == '__main__':
     # sort the races by time
     races.sort(key=lambda r: r.time)
 
+    # pull content from data/ files to prepend
+    prepend = ''
+    for file in glob.glob('data/*.csv'):
+        prepend += open(file, 'r').read() + '\n'
+
     # write the races to CSV file
     with open('races.csv', 'w') as f:
+        f.write(prepend)
         f.write('\n'.join([r.build_row() for r in races]))
