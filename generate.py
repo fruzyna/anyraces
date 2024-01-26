@@ -88,7 +88,7 @@ def generate_document(file: str, span: str, races: list, tags: str, series: str,
 if __name__ == '__main__':
     # read in the CSV file of races
     with open(RACES_FILE, 'r') as f:
-        races = [Race(r.split(',')) for r in f.readlines()]
+        races = [Race(r.split(',')) for r in f.readlines() if ',' in r]
 
     # sort the races by time
     races.sort(key=lambda r: r.datetime)

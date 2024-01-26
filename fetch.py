@@ -261,7 +261,7 @@ def process_indy(url: str, series: Series) -> list:
 
 
 def process_arca(url: str, series: Series) -> list:
-    """Fetch race schedule from espn.com/racing"""
+    """Fetch race schedule from arcaracing.com"""
     races = []
 
     # get rows of table
@@ -322,7 +322,9 @@ if __name__ == '__main__':
     # pull content from data/ files to prepend
     prepend = ''
     for file in glob.glob('data/*.csv'):
-        prepend += open(file, 'r').read() + '\n'
+        prepend += open(file, 'r').read()
+        if not prepend.endswith('\n'):
+            prepend += '\n'
 
     # write the races to CSV file
     with open('races.csv', 'w') as f:
