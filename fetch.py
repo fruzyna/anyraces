@@ -383,7 +383,7 @@ def process_nascar_mod(url: str, series: Series) -> list:
                 dt = parse_date(date.replace('Sept', 'Sep'), short_month=True)
 
             # use track as race name
-            race = cells[0].find('span', 'race-name-span').string
+            race = cells[0].find('span', 'race-name-span').string.strip()
 
             races.append(Race(race, series, dt, 'FloRacing'))
 
