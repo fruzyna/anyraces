@@ -188,7 +188,7 @@ def process_espn_f1(url: str, series: Series) -> list:
                 if not race:
                     race = s
 
-            tv = cells[3].string
+            tv = cells[3].string.replace('/ESPN+', '')
             if tv is None:
                 tv = 'ESPN?'
 
