@@ -9,11 +9,14 @@ DICTIONARY = {
     'NXS': 'NASCAR Xfinity Series',
     'NCTS': 'NASCAR Craftsman Truck Series',
     'ARCA': 'ARCA Menards Series',
+    'NWMT': 'NASCAR Whelen Modified Tour',
+    'NPS': 'NASCAR Pinty\'s Series (Canada)',
     'INDY': 'NTT IndyCar Series',
     'NXT': 'Indy NXT Series',
     'F1': 'Formula One',
     'WTSC': 'IMSA WeatherTech SportsCar Championship',
-    'PILOT': 'IMSA Michelin Pilot Challenge'
+    'PILOT': 'IMSA Michelin Pilot Challenge',
+    'MX5': 'Whelen Mazda MX-5 Cup'
 }
 
 HEADERS = """<link rel="stylesheet" type="text/css" href="style.css">
@@ -22,7 +25,7 @@ HEADERS = """<link rel="stylesheet" type="text/css" href="style.css">
 DISCLAIMER = '<div id="disclaimer">All times are US Central Time</div>'
 TABLE_HEADER = '<tr><th>Race</th><th>Series</th><th>Date</th><th>Time</th><th>Channel</th></tr>'
 LINKS = '<div class="links"><a href="/Week.html">This Week</a><a href="/Month.html">This Month</a><a href="/Year.html">This Year</a></div>'
-NOTES = f"""<div id="notes">Data sourced from ESPN, Indycar, IMSA, and ARCA<br>
+NOTES = f"""<div id="notes">Data sourced from ESPN, Indycar, and NASCAR<br>
                            Updated every Tuesday, last updated {datetime.now().strftime("%m/%d %H:%M")}<br>
                            <a href="https://github.com/fruzyna/anyraces">Open Source on Github</a></div>"""
 FOOTERS = '<script src="script.js"></script>'
