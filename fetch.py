@@ -173,7 +173,6 @@ def process_espn_f1(url: str, series: Series) -> list:
     html = page.read().decode("utf-8")
     soup = BeautifulSoup(html, "html.parser")
     rows = soup.tbody.find_all("tr")
-    rows.pop(0)
 
     for row in rows:
         cells = row.find_all("td")
