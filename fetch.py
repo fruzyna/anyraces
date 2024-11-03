@@ -1,4 +1,5 @@
 from urllib.request import urlopen, Request
+from urllib.error import HTTPError
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 import glob
@@ -393,8 +394,11 @@ if __name__ == '__main__':
     # build a list of races from each series
     races = []
     for l in series:
-        l.generate_races()
-        races.extend(l.races)
+        try:
+            l.generate_races()
+            races.extend(l.races)
+        except HTTPError:
+            print(f'Unable to fetch {l.name}')
 
     # sort the races by time
     races.sort(key=lambda r: r.time)
