@@ -155,6 +155,8 @@ def process_espn_racing(url: str, series: Series) -> list:
                         tv = ''
                     elif tv == 'USA Net':
                         tv = 'USA'
+                    elif tv == 'Prime Video':
+                        tv = 'Prime'
                 else:
                     tv = ''
 
@@ -230,6 +232,8 @@ def process_imsa(url: str, series: Series) -> list:
             tv = 'NBC'
         elif 'USA' in tvimg:
             tv = 'USA'
+        elif 'YOUTUBE' in tvimg:
+            tv = 'YouTube'
         else:
             tv = 'Unknown'
 
@@ -271,15 +275,7 @@ def process_indy(url: str, series: Series) -> list:
         dt = parse_date(f'{month} {day} {time}', short_month=True, include_weekday=False)
 
         # determine TV channel by image
-        tvimg = item.find("div", class_='schedule-list__broadcast-logos').a['href'].upper()
-        if 'PEACOCKTV' in tvimg:
-            tv = 'Peacock'
-        elif 'NBCSPORTS' in tvimg:
-            tv = 'NBC'
-        elif 'USANETWORK' in tvimg:
-            tv = 'USA'
-        else:
-            tv = 'Unknown'
+        tv = item.find("div", class_='schedule-list__broadcast-logos').a.img['alt']
 
         # combine into EventBot compatible dictionary
         races.append(Race(name, series, dt, tv))

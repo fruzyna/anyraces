@@ -47,11 +47,15 @@ th, td {
     text-align: center;
 }
 
+.primevideo, .prime {
+    color: blue;
+}
+
 .fox, .fs1, .fs2, .cnbc {
     color: navy;
 }
 
-.espn, .espn2, .espnu, .imsatv, .floracing {
+.espn, .espn2, .espnu, .imsatv, .floracing, .youtube {
     color: red;
 }
 
