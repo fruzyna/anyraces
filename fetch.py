@@ -213,9 +213,7 @@ def process_imsa(url: str, series: Series) -> list:
     rows.pop(0)
 
     for row in rows:
-        name = row.find('a', class_='onTv-event-title').string.strip()
-        name = name.replace(' (Only Available To Stream In The United States On Peacock Premium)', '')
-        name = name.replace(' (Available Globally)', '')
+        name = row.find('a', class_='onTv-event-title').string.strip().split(' (')[0]
         date = scrub_date(row.find("span", class_='date-display-single').string.split(' -')[0])
         dt = datetime.strptime(date, f'%A, %B %d, %Y – {TIME_FORMAT}')
         dt = dt - timedelta(hours=1)
