@@ -2,6 +2,7 @@ from urllib.request import urlopen, Request
 from urllib.error import HTTPError
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
+from dateutil import tz
 import glob
 
 
@@ -32,6 +33,8 @@ class Series(object):
             self.races = process_nascar_ca(self.schedule_url, self)
         elif 'nascar.com' in self.schedule_url and 'modified' in self.schedule_url:
             self.races = process_nascar_mod(self.schedule_url, self)
+        elif 'fiawec.com' in self.schedule_url:
+            self.races = process_wec(self.schedule_url, self)
 
 
 class Race(object):
@@ -63,7 +66,8 @@ series = [
     Series('F1', 'https://www.espn.com/f1/schedule', ['Grand-Prix', 'Open-Wheel', 'Premier']),
     #Series('F1', 'https://www.espn.com/racing/schedule/_/series/f1', ['Grand-Prix', 'Open-Wheel', 'Premier']),
     Series('WTSC', 'https://www.imsa.com/weathertech/tv-streaming-schedule/', ['IMSA', 'GT', 'Prototype', 'Premier']),
-    Series('PILOT', 'https://www.imsa.com/michelinpilotchallenge/tv-streaming-schedule/', ['IMSA', 'GT', 'Touring'])
+    Series('PILOT', 'https://www.imsa.com/michelinpilotchallenge/tv-streaming-schedule/', ['IMSA', 'GT', 'Touring']),
+    Series('WEC', 'https://www.fiawec.com/en/race/show/4929', ['GT', 'Prototype'])
 ]
 
 YEAR = now = datetime.now().year
@@ -380,6 +384,34 @@ def process_nascar_mod(url: str, series: Series) -> list:
             race = cells[0].find('span', 'race-name-span').string.strip()
 
             races.append(Race(race, series, dt, 'FloRacing'))
+
+    return races
+
+
+def process_wec(url: str, series: Series) -> list:
+    """Fetch race schedule from fiawec.com"""
+    races = []
+
+    parts = url.split('/')
+    index = int(parts[-1])
+    base = '/'.join(parts[:-1])
+
+    while True:
+        req = Request(f'{base}/{index}', headers=HEADERS)
+        try:
+            page = urlopen(req)
+            html = page.read().decode("utf-8")
+            soup = BeautifulSoup(html, "html.parser")
+
+            race = soup.find('h2', class_='premain-first-container-title')['title']
+            time = int(soup.find_all('span', class_='race-date-js')[-1]['data-timestamp'])
+
+            dt = datetime.fromtimestamp(time).astimezone(tz.gettz('America/Chicago'))
+            races.append(Race(race, series, dt, 'Max'))
+        except HTTPError:
+            break
+
+        index += 1
 
     return races
 
