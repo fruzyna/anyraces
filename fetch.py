@@ -72,6 +72,7 @@ series = [
 
 YEAR = now = datetime.now().year
 TIME_FORMAT = '%I:%M %p'
+TIME_ZONE = tz.gettz('America/Chicago')
 
 
 def get_date_format(short_month=False, include_weekday=True, short_weekday=False):
@@ -102,7 +103,9 @@ def parse_date(date_str, short_month=False, include_weekday=True, short_weekday=
 
     dt = datetime.strptime(date_str, f'{date_format} {date_separator}{time_format}')
     if eastern_time:
-        dt = dt - timedelta(hours=1)
+        dt = dt.replace(tzinfo=tz.gettz('America/New_York')).astimezone(TIME_ZONE)
+    else:
+        dt = dt.replace(tzinfo=TIME_ZONE)
 
     return dt
 
@@ -220,7 +223,7 @@ def process_imsa(url: str, series: Series) -> list:
         name = row.find('a', class_='onTv-event-title').string.strip().split(' (')[0]
         date = scrub_date(row.find("span", class_='date-display-single').string.split(' -')[0])
         dt = datetime.strptime(date, f'%A, %B %d, %Y – {TIME_FORMAT}')
-        dt = dt - timedelta(hours=1)
+        dt = dt.replace(tzinfo=tz.gettz('America/New_York')).astimezone(TIME_ZONE)
 
         # determine TV channel by image
         tvimg = row.img['src'].upper()
@@ -406,7 +409,7 @@ def process_wec(url: str, series: Series) -> list:
             race = soup.find('h2', class_='premain-first-container-title')['title']
             time = int(soup.find_all('span', class_='race-date-js')[-1]['data-timestamp'])
 
-            dt = datetime.fromtimestamp(time).astimezone(tz.gettz('America/Chicago'))
+            dt = datetime.fromtimestamp(time).astimezone(TIME_ZONE)
             races.append(Race(race, series, dt, 'Max'))
         except HTTPError:
             break
