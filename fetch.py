@@ -407,7 +407,7 @@ def process_wec(url: str, series: Series) -> list:
             soup = BeautifulSoup(html, "html.parser")
 
             race = soup.find('h2', class_='premain-first-container-title')['title']
-            time = int(soup.find_all('span', class_='race-date-js')[-1]['data-timestamp'])
+            time = int(soup.find_all('span', class_='race-date-js')[-2]['data-timestamp'])
 
             dt = datetime.fromtimestamp(time).astimezone(TIME_ZONE)
             races.append(Race(race, series, dt, 'Max'))
