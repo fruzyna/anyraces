@@ -4,6 +4,7 @@ from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 from dateutil import tz
 import glob
+import json
 
 
 HEADERS = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"}
@@ -57,9 +58,9 @@ class Race(object):
 series = [
     Series('NPS', 'https://www.nascar.ca/schedule/', ['NASCAR', 'Stock']),
     Series('NWMT', 'https://www.nascar.com/nascar-whelen-modified-tour-schedule/', ['NASCAR', 'Stock', 'Open-Wheel']),
-    Series('NCS', 'https://www.espn.com/racing/schedule', ['NASCAR', 'Stock', 'Premier']),
-    Series('NXS', 'https://www.espn.com/racing/schedule/_/series/xfinity', ['NASCAR', 'Stock']),
-    Series('NCTS', 'https://www.espn.com/racing/schedule/_/series/camping', ['NASCAR', 'Stock']),
+    #Series('NCS', 'https://www.espn.com/racing/schedule', ['NASCAR', 'Stock', 'Premier']),
+    #Series('NXS', 'https://www.espn.com/racing/schedule/_/series/xfinity', ['NASCAR', 'Stock']),
+    #Series('NCTS', 'https://www.espn.com/racing/schedule/_/series/camping', ['NASCAR', 'Stock']),
     Series('ARCA', 'https://www.arcaracing.com/2024-race-broadcast-schedule/', ['Stock']),
     Series('INDY', 'https://www.espn.com/racing/schedule/_/series/indycar', ['IndyCar', 'Open-Wheel', 'Premier']),
     Series('NXT', 'https://www.indycar.com/INDYNXT/Schedule', ['IndyCar', 'Open-Wheel']),
@@ -419,6 +420,30 @@ def process_wec(url: str, series: Series) -> list:
     return races
 
 
+def process_nascar_nationals() -> list:
+    """Fetch official national NASCAR series' schedules from NASCAR.com."""
+    page = urlopen(f'https://cf.nascar.com/cacher/{datetime.now().year}/race_list_basic.json')
+    data = json.load(page)
+
+    races = []
+    for s in data:
+        if s == 'series_1':
+            series = Series('NCS', 'https://www.espn.com/racing/schedule', ['NASCAR', 'Stock', 'Premier'])
+        elif s == 'series_2':
+            series = Series('NXS', 'https://www.espn.com/racing/schedule/_/series/xfinity', ['NASCAR', 'Stock'])
+        elif s == 'series_3':
+            series = Series('NCTS', 'https://www.espn.com/racing/schedule/_/series/camping', ['NASCAR', 'Stock'])
+        else:
+            continue
+
+        def fromisoformat(date: str):
+            return datetime.fromisoformat(date).replace(tzinfo=tz.gettz('America/New_York')).astimezone(TIME_ZONE)
+
+        races += [Race(r['race_name'], series, fromisoformat(r['race_date']), r['television_broadcaster']) for r in data[s]]
+
+    return races
+
+
 if __name__ == '__main__':
     # build a list of races from each series
     races = []
@@ -428,6 +453,8 @@ if __name__ == '__main__':
             races.extend(l.races)
         except HTTPError:
             print(f'Unable to fetch {l.name}')
+
+    races += process_nascar_nationals()
 
     # sort the races by time
     races.sort(key=lambda r: r.time)
