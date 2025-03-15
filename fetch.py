@@ -198,9 +198,11 @@ def process_espn_f1(url: str, series: Series) -> list:
                 if not race:
                     race = s
 
-            tv = cells[3].string.replace('/ESPN+', '')
+            tv = cells[3].string
             if tv is None:
                 tv = 'ESPN?'
+            else:
+                tv = tv.replace('/ESPN+', '')
 
             # combine into EventBot compatible dictionary
             races.append(Race(race, series, dt, tv))
@@ -272,19 +274,21 @@ def process_indy(url: str, series: Series) -> list:
 
     for item in items:
         name = item.find('a', class_='schedule-list__title').span.string.strip()
-        date = item.find("div", class_='schedule-list__date')
-        month = date.contents[0].strip()
-        day = date.find('span', class_='schedule-list__date-day').string.strip()
-        time = item.find('span', class_='timeEst').string.strip()
-        date = scrub_date(f'{YEAR} {month} {day} {time}')
+        date = item.find('div', class_='schedule-list__date')
+        # indy replaces past races with the winner
+        if date:
+            month = date.contents[0].strip()
+            day = date.find('span', class_='schedule-list__date-day').string.strip()
+            time = item.find('span', class_='timeEst').string.strip()
+            date = scrub_date(f'{YEAR} {month} {day} {time}')
 
-        dt = parse_date(f'{month} {day} {time}', short_month=True, include_weekday=False)
+            dt = parse_date(f'{month} {day} {time}', short_month=True, include_weekday=False)
 
-        # determine TV channel by image
-        tv = item.find("div", class_='schedule-list__broadcast-logos').a.img['alt']
+            # determine TV channel by image
+            tv = item.find("div", class_='schedule-list__broadcast-logos').a.img['alt']
 
-        # combine into EventBot compatible dictionary
-        races.append(Race(name, series, dt, tv))
+            # combine into EventBot compatible dictionary
+            races.append(Race(name, series, dt, tv))
 
     return races
 
@@ -408,10 +412,14 @@ def process_wec(url: str, series: Series) -> list:
             soup = BeautifulSoup(html, "html.parser")
 
             race = soup.find('h2', class_='premain-first-container-title')['title']
-            time = int(soup.find_all('span', class_='race-date-js')[-2]['data-timestamp'])
+            times = soup.find_all('span', class_='race-date-js')
 
-            dt = datetime.fromtimestamp(time).astimezone(TIME_ZONE)
-            races.append(Race(race, series, dt, 'Max'))
+            # wec removes times from completed races
+            if len(times) > 1:
+                time = int(times[-2]['data-timestamp'])
+
+                dt = datetime.fromtimestamp(time).astimezone(TIME_ZONE)
+                races.append(Race(race, series, dt, 'Max'))
         except HTTPError:
             break
 
