@@ -68,7 +68,8 @@ series = [
     #Series('F1', 'https://www.espn.com/racing/schedule/_/series/f1', ['Grand-Prix', 'Open-Wheel', 'Premier']),
     Series('WTSC', 'https://www.imsa.com/weathertech/tv-streaming-schedule/', ['IMSA', 'GT', 'Prototype', 'Premier']),
     Series('PILOT', 'https://www.imsa.com/michelinpilotchallenge/tv-streaming-schedule/', ['IMSA', 'GT', 'Touring']),
-    Series('WEC', 'https://www.fiawec.com/en/race/show/4929', ['GT', 'Prototype'])
+    # TODO: the site has been redesigned
+    #Series('WEC', 'https://www.fiawec.com/en/race/show/4929', ['GT', 'Prototype'])
 ]
 
 YEAR = now = datetime.now().year
@@ -91,7 +92,7 @@ def scrub_date(date_str):
     return date_str.replace('.', '').replace(' ET', '').replace('Noon', '12:00 PM').replace('TBA', '12:00 PM').replace('TBD', '12:00 PM')
 
 
-def parse_date(date_str, short_month=False, include_weekday=True, short_weekday=False, date_separator='', eastern_time=True):
+def parse_date(date_str, short_month=False, include_weekday=True, short_weekday=False, date_separator='', time_zone='America/New_York'):
     """Takes an un-scrubbed date string and returns a time in central time."""
     date_str = f'{YEAR} {scrub_date(date_str)}'
     date_format = get_date_format(short_month, include_weekday, short_weekday)
@@ -102,9 +103,16 @@ def parse_date(date_str, short_month=False, include_weekday=True, short_weekday=
     if date_separator:
         date_separator += ' '
 
+    # remove timezone at end
+    if date_str.endswith(' EST'):
+        date_str = date_str[:-4]
+    elif date_str.endswith(' MST'):
+        date_str = date_str[:-4]
+        time_zone = 'America/Denver'
+
     dt = datetime.strptime(date_str, f'{date_format} {date_separator}{time_format}')
-    if eastern_time:
-        dt = dt.replace(tzinfo=tz.gettz('America/New_York')).astimezone(TIME_ZONE)
+    if time_zone:
+        dt = dt.replace(tzinfo=tz.gettz(time_zone)).astimezone(TIME_ZONE)
     else:
         dt = dt.replace(tzinfo=TIME_ZONE)
 
@@ -311,6 +319,9 @@ def process_arca(url: str, series: Series) -> list:
             # combine date and time, then interpret
             date = cells[0].string.replace('Sept', 'Sep')
             time = cells[3].string.replace('*', '')
+            if "(Delayed broadcast at " in time:
+                time = time[time.index("at") + 3:-1]
+
             date = f'{date} {time}'
 
             try:
@@ -461,6 +472,8 @@ if __name__ == '__main__':
             races.extend(l.races)
         except HTTPError:
             print(f'Unable to fetch {l.name}')
+        except:
+            print(f'Unable to scrape {l.name}')
 
     races += process_nascar_nationals()
 
