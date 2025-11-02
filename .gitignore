@@ -1,6 +1,4 @@
-*.csv
-*.html
+*.pyc
 
 data/
 generated/
-www/

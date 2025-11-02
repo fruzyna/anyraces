@@ -1,6 +1,4 @@
 from datetime import datetime, timedelta
-from os.path import exists
-
 
 GENERATED_DIR = 'generated'
 RACES_FILE = f'{GENERATED_DIR}/races.csv'
@@ -27,7 +25,7 @@ DISCLAIMER = '<div id="disclaimer">All times are US Central Time</div>'
 TABLE_HEADER = '<tr><th>Race</th><th>Series</th><th>Date</th><th>Time</th><th>Channel</th></tr>'
 LINKS = '<div class="links"><a href="/Week.html">This Week</a><a href="/Month.html">This Month</a><a href="/Year.html">This Year</a></div>'
 NOTES = f"""<div id="notes">Data sourced from ESPN, Indycar, and NASCAR<br>
-                           Updated every Tuesday, last updated {datetime.now().strftime("%m/%d %H:%M")}<br>
+                           Updated every Monday, last updated {datetime.now().strftime("%m/%d %H:%M")}<br>
                            <a href="https://github.com/fruzyna/anyraces">Open Source on Github</a></div>"""
 FOOTERS = '<script src="script.js"></script>'
 
@@ -89,7 +87,7 @@ def generate_document(file: str, span: str, races: list, tags: str, series: str,
         f.write(f'</body>{FOOTERS}</html>')
 
 
-if __name__ == '__main__':
+def generate_pages():
     # read in the CSV file of races
     with open(RACES_FILE, 'r') as f:
         races = [Race(r.split(',')) for r in f.readlines() if ',' in r]
@@ -149,3 +147,7 @@ if __name__ == '__main__':
         generate_document(f'{tag}-Month.html', 'Month', list(filter(filt, this_month)), tags_month, series_month, tag)
 
     print('Generated', len(tags), 'tags')
+
+
+if __name__ == '__main__':
+    generate_pages()

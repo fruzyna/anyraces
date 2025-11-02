@@ -466,7 +466,7 @@ def process_nascar_nationals() -> list:
     return races
 
 
-if __name__ == '__main__':
+def fetch_races():
     # build a list of races from each series
     races = []
     for l in series:
@@ -496,3 +496,7 @@ if __name__ == '__main__':
         f.write('\n'.join([r.build_row() for r in races]))
 
     print('Fetched', len(races), 'races')
+
+
+if __name__ == '__main__':
+    fetch_races()
