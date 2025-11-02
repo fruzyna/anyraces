@@ -75,11 +75,11 @@ app = FastAPI(lifespan=lifespan)
 # serve the index, builds each page from query parameters
 @app.get("/", response_class=FileResponse)
 async def index():
-    return "{GENERATED_DIR}/{DEFAULT_PAGE}"
+    return f"{GENERATED_DIR}/{DEFAULT_PAGE}"
 
 @app.get("/index.html", response_class=FileResponse)
 async def index_html():
-    return "{GENERATED_DIR}/{DEFAULT_PAGE}"
+    return f"{GENERATED_DIR}/{DEFAULT_PAGE}"
 
 @app.get("/style.css", response_class=FileResponse)
 async def styles():
