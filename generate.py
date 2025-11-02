@@ -2,7 +2,8 @@ from datetime import datetime, timedelta
 from os.path import exists
 
 
-RACES_FILE = 'races.csv'
+GENERATED_DIR = 'generated'
+RACES_FILE = f'{GENERATED_DIR}/races.csv'
 
 DICTIONARY = {
     'NCS': 'NASCAR Cup Series',
@@ -66,7 +67,7 @@ def generate_document(file: str, span: str, races: list, tags: str, series: str,
 
     title = f'Any {tag}Races This {span}?'
 
-    with open(file, 'w') as f:
+    with open(f'{GENERATED_DIR}/{file}', 'w') as f:
         f.write(f'<html><head><title>{title}</title>{HEADERS}</head><body>')
         f.write(f'<h1>{title}</h1>')
 
@@ -137,6 +138,8 @@ if __name__ == '__main__':
         generate_document(f'{s}-Week.html', 'Week', list(filter(filt, this_week)), tags_week, series_week, s)
         generate_document(f'{s}-Month.html', 'Month', list(filter(filt, this_month)), tags_month, series_month, s)
 
+    print('Generated', len(series), 'series')
+
     for tag in tags:
         filt = lambda r: tag in r.tags
         series_str = f'<div class="links">{"".join([build_tag(tag, l) for l in series])}</div>'
@@ -144,3 +147,5 @@ if __name__ == '__main__':
         generate_document(f'{tag}-Year.html', 'Year', list(filter(filt, races)), tags_year, series_year, tag)
         generate_document(f'{tag}-Week.html', 'Week', list(filter(filt, this_week)), tags_week, series_week, tag)
         generate_document(f'{tag}-Month.html', 'Month', list(filter(filt, this_month)), tags_month, series_month, tag)
+
+    print('Generated', len(tags), 'tags')

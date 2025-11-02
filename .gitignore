@@ -1,2 +1,6 @@
 *.csv
 *.html
+
+data/
+generated/
+www/
