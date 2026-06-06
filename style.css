@@ -3,6 +3,10 @@ body {
     text-align: center;
 }
 
+#series, #timeframe {
+    text-decoration: underline;
+}
+
 .links > a {
     display: inline-block;
     margin: 5px;
@@ -44,7 +48,15 @@ tr:nth-child(even) {
 
 th, td {
     padding: 3px 10px;
-    text-align: center;
+    text-align: left;
+}
+
+.channel > a {
+    text-decoration: none;
+}
+
+.appletv {
+    color: black;
 }
 
 .primevideo, .prime {

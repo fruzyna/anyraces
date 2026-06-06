@@ -1,4 +1,6 @@
 *.pyc
+*.csv
 
+config/
 data/
 generated/

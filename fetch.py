@@ -1,83 +1,14 @@
 from urllib.request import urlopen, Request
 from urllib.error import HTTPError
 from bs4 import BeautifulSoup
-from datetime import datetime, timedelta
+from datetime import datetime
 from dateutil import tz
-import glob
 import json
 
-DATA_DIR = 'data'
-GENERATED_DIR = 'generated'
-RACES_FILE = f'{GENERATED_DIR}/races.csv'
+from races import YEAR, AnyRaces, Race
 
-HEADERS = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"}
-
-
-class Series(object):
-
-    def __init__(self, name: str, schedule_url: str, tags=[]):
-        self.name = name
-        self.schedule_url = schedule_url
-        self.tags = tags
-        self.races = []
-
-    def generate_races(self):
-        """Generate the list of races by processing data from the given URL."""
-        if 'espn.com/racing' in self.schedule_url:
-            self.races = process_espn_racing(self.schedule_url, self)
-        elif 'espn.com/f1' in self.schedule_url:
-            self.races = process_espn_f1(self.schedule_url, self)
-        elif 'indycar.com' in self.schedule_url:
-            self.races = process_indy(self.schedule_url, self)
-        elif 'imsa.com' in self.schedule_url:
-            self.races = process_imsa(self.schedule_url, self)
-        elif 'arcaracing.com' in self.schedule_url:
-            self.races = process_arca(self.schedule_url, self)
-        elif 'nascar.ca' in self.schedule_url:
-            self.races = process_nascar_ca(self.schedule_url, self)
-        elif 'nascar.com' in self.schedule_url and 'modified' in self.schedule_url:
-            self.races = process_nascar_mod(self.schedule_url, self)
-        elif 'fiawec.com' in self.schedule_url:
-            self.races = process_wec(self.schedule_url, self)
-
-
-class Race(object):
-
-    def __init__(self, name: str, series: Series, time: datetime, channel: str):
-        self.name = name.replace("’", "'")
-        self.time = time
-        self.channel = channel.replace(' ', '')
-        self.series = series.name
-        self.tags = series.tags
-
-    def build_row(self):
-        """Builds a CSV row of data from the object."""
-        tags = ' '.join(self.tags)
-        date = self.time.strftime('%m/%d')
-        time = self.time.strftime('%H:%M')
-        return ','.join([self.name, self.series, date, time, self.channel, tags])
-
-
-series = [
-    Series('NPS', 'https://www.nascar.ca/schedule/', ['NASCAR', 'Stock']),
-    Series('NWMT', 'https://www.nascar.com/nascar-whelen-modified-tour-schedule/', ['NASCAR', 'Stock', 'Open-Wheel']),
-    #Series('NCS', 'https://www.espn.com/racing/schedule', ['NASCAR', 'Stock', 'Premier']),
-    #Series('NXS', 'https://www.espn.com/racing/schedule/_/series/xfinity', ['NASCAR', 'Stock']),
-    #Series('NCTS', 'https://www.espn.com/racing/schedule/_/series/camping', ['NASCAR', 'Stock']),
-    Series('ARCA', 'https://www.arcaracing.com/2024-race-broadcast-schedule/', ['Stock']),
-    Series('INDY', 'https://www.espn.com/racing/schedule/_/series/indycar', ['IndyCar', 'Open-Wheel', 'Premier']),
-    Series('NXT', 'https://www.indycar.com/INDYNXT/Schedule', ['IndyCar', 'Open-Wheel']),
-    Series('F1', 'https://www.espn.com/f1/schedule', ['Grand-Prix', 'Open-Wheel', 'Premier']),
-    #Series('F1', 'https://www.espn.com/racing/schedule/_/series/f1', ['Grand-Prix', 'Open-Wheel', 'Premier']),
-    Series('WTSC', 'https://www.imsa.com/weathertech/tv-streaming-schedule/', ['IMSA', 'GT', 'Prototype', 'Premier']),
-    Series('PILOT', 'https://www.imsa.com/michelinpilotchallenge/tv-streaming-schedule/', ['IMSA', 'GT', 'Touring']),
-    # TODO: the site has been redesigned
-    #Series('WEC', 'https://www.fiawec.com/en/race/show/4929', ['GT', 'Prototype'])
-]
-
-YEAR = now = datetime.now().year
+HEADERS = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36'}
 TIME_FORMAT = '%I:%M %p'
-TIME_ZONE = tz.gettz('America/Chicago')
 
 
 def get_date_format(short_month=False, include_weekday=True, short_weekday=False):
@@ -95,7 +26,7 @@ def scrub_date(date_str):
     return date_str.replace('.', '').replace(' ET', '').replace('Noon', '12:00 PM').replace('TBA', '12:00 PM').replace('TBD', '12:00 PM')
 
 
-def parse_date(date_str, short_month=False, include_weekday=True, short_weekday=False, date_separator='', time_zone='America/New_York'):
+def parse_date(date_str, out_tz, short_month=False, include_weekday=True, short_weekday=False, date_separator='', in_tz='America/New_York'):
     """Takes an un-scrubbed date string and returns a time in central time."""
     date_str = f'{YEAR} {scrub_date(date_str)}'
     date_format = get_date_format(short_month, include_weekday, short_weekday)
@@ -111,30 +42,46 @@ def parse_date(date_str, short_month=False, include_weekday=True, short_weekday=
         date_str = date_str[:-4]
     elif date_str.endswith(' MST'):
         date_str = date_str[:-4]
-        time_zone = 'America/Denver'
+        in_tz = 'America/Denver'
+    elif date_str.endswith(' PST'):
+        date_str = date_str[:-4]
+        in_tz = 'America/Seattle'
 
+    # build the datetime object
     dt = datetime.strptime(date_str, f'{date_format} {date_separator}{time_format}')
-    if time_zone:
-        dt = dt.replace(tzinfo=tz.gettz(time_zone)).astimezone(TIME_ZONE)
+    if in_tz:
+        dt = dt.replace(tzinfo=tz.gettz(in_tz)).astimezone(out_tz)
     else:
-        dt = dt.replace(tzinfo=TIME_ZONE)
+        dt = dt.replace(tzinfo=out_tz)
 
     return dt
 
 
-def process_espn_racing(url: str, series: Series) -> list:
+def prevent_duplicates(name, previous_names):
+    """Appends a number after a given name if it is already in the provided list."""
+    i = 0
+    n = name
+    while n in previous_names:
+        i += 1
+        n = f'{name} {i}'
+
+    return n
+
+
+def process_espn_racing(ar: AnyRaces, key: str) -> list:
     """Fetch race schedule from espn.com/racing"""
     races = []
 
     # get rows of table
-    page = urlopen(url)
+    series = ar.series[key]
+    page = urlopen(series.schedule_url)
     html = page.read().decode('latin-1')
-    soup = BeautifulSoup(html, "html.parser")
-    rows = soup.table.find_all("tr")
+    soup = BeautifulSoup(html, 'html.parser')
+    rows = soup.table.find_all('tr')
     rows.pop(0)
 
     for row in rows:
-        cells = row.find_all("td")
+        cells = row.find_all('td')
         if len(cells) >= 2:
             # combine date and time, then interpret
             date = ''
@@ -144,7 +91,7 @@ def process_espn_racing(url: str, series: Series) -> list:
                 date += s
 
             if date != 'DATE':
-                dt = parse_date(date, short_month=True, short_weekday=True)
+                dt = parse_date(date, ar.time_zone, short_month=True, short_weekday=True)
 
                 # use track as race name
                 race = ''
@@ -153,8 +100,8 @@ def process_espn_racing(url: str, series: Series) -> list:
                     if not race:
                         race = s
                     # interpret postponed dates
-                    elif s.startswith("**Race postponed to "):
-                        dt = parse_date(s[s.index(' to ')+4:], short_month=True, include_weekday=False, date_separator='at')
+                    elif s.startswith('**Race postponed to '):
+                        dt = parse_date(s[s.index(' to ')+4:], ar.time_zone, short_month=True, include_weekday=False, date_separator='at')
                     elif 'Practice' in s or 'Qualifying' in s or 'Shootout' in s:
                         skip = True
                     elif 'Sprint' in s:
@@ -169,9 +116,9 @@ def process_espn_racing(url: str, series: Series) -> list:
                     race = race[start:]
 
                 if len(cells) >= 3:
-                    tv = cells[2].string
+                    tv = list(cells[2].strings)[0]
                     if tv is None:
-                        tv = ''
+                        tv = 'FOX'
                     elif tv == 'USA Net':
                         tv = 'USA'
                     elif tv == 'Prime Video':
@@ -181,27 +128,28 @@ def process_espn_racing(url: str, series: Series) -> list:
 
                 # combine into EventBot compatible dictionary
                 if not skip:
-                    races.append(Race(race, series, dt, tv))
+                    races.append(Race(race, key, dt, tv))
 
     return races
 
 
-def process_espn_f1(url: str, series: Series) -> list:
+def process_espn_f1(ar: AnyRaces, key: str) -> list:
     """Fetch race schedule from espn.com/f1"""
     races = []
 
     # get rows of table
-    page = urlopen(url)
-    html = page.read().decode("utf-8")
-    soup = BeautifulSoup(html, "html.parser")
-    rows = soup.tbody.find_all("tr")
+    series = ar.series[key]
+    page = urlopen(series.schedule_url)
+    html = page.read().decode('utf-8')
+    soup = BeautifulSoup(html, 'html.parser')
+    rows = soup.tbody.find_all('tr')
 
     for row in rows:
-        cells = row.find_all("td")
+        cells = row.find_all('td')
         # interpret date time
         date = cells[2].string
-        if " - " in date:
-            dt = parse_date(date, short_month=True, include_weekday=False, date_separator='-')
+        if ' - ' in date:
+            dt = parse_date(date, ar.time_zone, short_month=True, include_weekday=False, date_separator='-')
 
             # interpret race name
             race = ''
@@ -216,56 +164,60 @@ def process_espn_f1(url: str, series: Series) -> list:
                 tv = tv.replace('/ESPN+', '')
 
             # combine into EventBot compatible dictionary
-            races.append(Race(race, series, dt, tv))
+            races.append(Race(race, key, dt, tv))
 
     return races
 
 
-def process_imsa(url: str, series: Series) -> list:
+def process_imsa(ar: AnyRaces, key: str) -> list:
     """Fetch race schedule from imsa.com"""
     races = []
 
     # get rows of table
-    req = Request(url, headers=HEADERS)
+    series = ar.series[key]
+    req = Request(series.schedule_url, headers=HEADERS)
     page = urlopen(req)
-    html = page.read().decode("utf-8")
-    soup = BeautifulSoup(html, "html.parser")
-    rows = soup.find_all("div", class_="rich-text-component-container")
+    html = page.read().decode('utf-8')
+    soup = BeautifulSoup(html, 'html.parser')
+    rows = soup.find_all('div', class_='rich-text-component-container')
     rows.pop(0)
 
     for row in rows:
         name = row.find('a', class_='onTv-event-title').string.strip().split(' (')[0]
-        date = scrub_date(row.find("span", class_='date-display-single').string.split(' -')[0])
-        dt = datetime.strptime(date, f'%A, %B %d, %Y – {TIME_FORMAT}')
-        dt = dt.replace(tzinfo=tz.gettz('America/New_York')).astimezone(TIME_ZONE)
+        if name != 'WeatherTech Championship Qualifying':
+            date = scrub_date(row.find('span', class_='date-display-single').string.split(' -')[0])
+            dt = datetime.strptime(date, f'%A, %B %d, %Y – {TIME_FORMAT}')
+            dt = dt.replace(tzinfo=tz.gettz('America/New_York')).astimezone(ar.time_zone)
 
-        # determine TV channel by image
-        tvimg = row.img['src'].upper()
-        if 'IMSATV' in tvimg:
-            tv = 'IMSAtv'
-        elif 'PEACOCK' in tvimg:
-            tv = 'Peacock'
-        elif 'CNBC' in tvimg:
-            tv = 'CNBC'
-        elif 'NBC' in tvimg:
-            tv = 'NBC'
-        elif 'USA' in tvimg:
-            tv = 'USA'
-        elif 'YOUTUBE' in tvimg:
-            tv = 'YouTube'
-        else:
-            tv = 'Unknown'
+            # determine TV channel by image
+            tvimg = row.img['src'].upper()
+            if 'IMSATV' in tvimg:
+                tv = 'IMSAtv'
+            elif 'PEACOCK' in tvimg:
+                tv = 'Peacock'
+            elif 'CNBC' in tvimg:
+                tv = 'CNBC'
+            elif 'NBC' in tvimg:
+                tv = 'NBC'
+            elif 'USA' in tvimg:
+                tv = 'USA'
+            elif 'YOUTUBE' in tvimg:
+                tv = 'YouTube'
+            else:
+                tv = 'Unknown'
 
-        races.append(Race(name, series, dt, tv))
+            races.append(Race(name, key, dt, tv))
 
     # remove duplicate listings
     remove = []
     for i in range(len(races)):
         if i + 1 < len(races):
-            if abs(races[i].time - races[i+1].time) < timedelta(minutes=30) and races[i].series == races[i+1].series:
+            a = races[i]
+            b = races[i+1]
+            if a.name == b.name:
                 remove.append(i)
-                races[i+1].time = races[i].time
-                races[i+1].channel = f"{races[i].channel} {races[i+1].channel}"
+                b.time = a.time if a.time < b.time else b.time
+                b.channel = ' '.join(set(f'{a.channel} {b.channel}'.split()))
 
     for i in sorted(remove, reverse=True):
         del races[i]
@@ -273,74 +225,70 @@ def process_imsa(url: str, series: Series) -> list:
     return races
 
 
-def process_indy(url: str, series: Series) -> list:
+def process_indy(ar: AnyRaces, key: str) -> list:
     """Fetch race schedule from indycar.com"""
     races = []
 
     # get rows of table
-    page = urlopen(url)
-    html = page.read().decode("utf-8")
-    soup = BeautifulSoup(html, "html.parser")
-    items = soup.find_all("li", class_="schedule-list__item")
+    series = ar.series[key]
+    page = urlopen(series.schedule_url)
+    html = page.read().decode('utf-8')
+    soup = BeautifulSoup(html, 'html.parser')
+    items = soup.find('section', class_='card-repeater').find_all('div', class_='event-card')
 
     for item in items:
-        name = item.find('a', class_='schedule-list__title').span.string.strip()
-        date = item.find('div', class_='schedule-list__date')
-        # indy replaces past races with the winner
-        if date:
-            month = date.contents[0].strip()
-            day = date.find('span', class_='schedule-list__date-day').string.strip()
-            time = item.find('span', class_='timeEst').string.strip()
-            date = scrub_date(f'{YEAR} {month} {day} {time}')
+        name = item.find('h3', class_='event-card-title').string.strip().replace('INDY NXT by Firestone at', '')
+        date = item.find('div', class_='event-card-header-date').string.strip()
+        time = item.find('div', class_='event-card-header-time').string.strip()
+        tv = item.find('div', class_='event-card-header-network').img['alt'].strip()
 
-            dt = parse_date(f'{month} {day} {time}', short_month=True, include_weekday=False)
+        date = scrub_date(f'{date} {time}')
+        dt = parse_date(date, ar.time_zone, short_month=True, include_weekday=False)
 
-            # determine TV channel by image
-            tv = item.find("div", class_='schedule-list__broadcast-logos').a.img['alt']
-
-            # combine into EventBot compatible dictionary
-            races.append(Race(name, series, dt, tv))
+        # combine into EventBot compatible dictionary
+        races.append(Race(name, key, dt, tv))
 
     return races
 
 
-def process_arca(url: str, series: Series) -> list:
+def process_arca(ar: AnyRaces, key: str) -> list:
     """Fetch race schedule from arcaracing.com"""
     races = []
 
     # get rows of table
-    req = Request(url, headers=HEADERS)
+    series = ar.series[key]
+    req = Request(series.schedule_url, headers=HEADERS)
     page = urlopen(req)
-    html = page.read().decode("utf-8")
-    soup = BeautifulSoup(html, "html.parser")
-    rows = soup.table.find_all("tr")
+    html = page.read().decode('utf-8')
+    soup = BeautifulSoup(html, 'html.parser')
+    rows = soup.table.find_all('tr')
     rows.pop(0)
 
     for row in rows:
-        cells = row.find_all("td")
+        cells = row.find_all('td')
         if len(cells) >= 5:
             # combine date and time, then interpret
             date = cells[0].string.replace('Sept', 'Sep')
             time = cells[3].string.replace('*', '')
-            if "(Delayed broadcast at " in time:
-                time = time[time.index("at") + 3:-1]
+            if '(Delayed broadcast at ' in time:
+                time = time[time.index('at') + 3:-1]
 
             date = f'{date} {time}'
 
             try:
-                dt = parse_date(date, short_month=True)
+                dt = parse_date(date, ar.time_zone, short_month=True)
             except ValueError:
-                dt = parse_date(date)
+                dt = parse_date(date, ar.time_zone)
 
             # use track as race name
-            race = cells[1].string
+            race = prevent_duplicates(cells[1].string, [r.name for r in races])
 
-            tv = cells[4].string
+            tv = cells[4].string.split()[0]
             stream = cells[5].string
             if tv == '—':
                 tv = stream
 
-            races.append(Race(race, series, dt, tv))
+            races.append(Race(race, key, dt, tv))
 
             if tv != stream and stream != 'Fox Sports App':
                 races[-1].channel += ' ' + stream.replace(' / Fox Sports App', '')
@@ -348,49 +296,51 @@ def process_arca(url: str, series: Series) -> list:
     return races
 
 
-def process_nascar_ca(url: str, series: Series) -> list:
-    """Fetch race schedule from arcaracing.com"""
+def process_nascar_ca(ar: AnyRaces, key: str) -> list:
+    """Fetch race schedule from nascar.ca"""
     races = []
 
     # get rows of table
-    req = Request(url, headers=HEADERS)
+    series = ar.series[key]
+    req = Request(series.schedule_url, headers=HEADERS)
     page = urlopen(req)
-    html = page.read().decode("utf-8")
-    soup = BeautifulSoup(html, "html.parser")
-    rows = soup.table.find_all("tr")
+    html = page.read().decode('utf-8')
+    soup = BeautifulSoup(html, 'html.parser')
+    rows = soup.table.find_all('tr')
     rows.pop(0)
 
     for row in rows:
-        cells = row.find_all("td")
+        cells = row.find_all('td')
         if len(cells) >= 5:
             # combine date and time, then interpret
             date = cells[1].find('div', 'event-date').string
             time = cells[1].find('div', 'event-time').string
 
-            dt = parse_date(f'{date} {time}', short_month=True)
+            dt = parse_date(f'{date} {time}', ar.time_zone, short_month=True)
 
             # use track as race name
-            race = cells[0].find('div', 'race-name').string
+            race = prevent_duplicates(cells[0].find('div', 'race-name').string, [r.name for r in races])
 
-            races.append(Race(race, series, dt, 'FloRacing'))
+            races.append(Race(race, key, dt, 'FloRacing'))
 
     return races
 
 
-def process_nascar_mod(url: str, series: Series) -> list:
-    """Fetch race schedule from arcaracing.com"""
+def process_nascar_mod(ar: AnyRaces, key: str) -> list:
+    """Fetch race schedule from nascar.com"""
     races = []
 
     # get rows of table
-    req = Request(url, headers=HEADERS)
+    series = ar.series[key]
+    req = Request(series.schedule_url, headers=HEADERS)
     page = urlopen(req)
-    html = page.read().decode("utf-8")
-    soup = BeautifulSoup(html, "html.parser")
-    rows = soup.table.find_all("tr")
+    html = page.read().decode('utf-8')
+    soup = BeautifulSoup(html, 'html.parser')
+    rows = soup.table.find_all('tr')
     rows.pop(0)
 
     for row in rows:
-        cells = row.find_all("td")
+        cells = row.find_all('td')
         if len(cells) >= 5:
             # combine date and time, then interpret
             date = cells[1].contents[0].string.strip()
@@ -398,105 +348,112 @@ def process_nascar_mod(url: str, series: Series) -> list:
             date = f'{date} {time}'
 
             try:
-                dt = parse_date(date)
+                dt = parse_date(date, ar.time_zone)
             except ValueError:
-                dt = parse_date(date.replace('Sept', 'Sep'), short_month=True)
+                dt = parse_date(date.replace('Sept', 'Sep'), ar.time_zone, short_month=True)
 
             # use track as race name
-            race = cells[0].find('span', 'race-name-span').string.strip()
+            race = cells[0].find('span', 'race-name-span').string.replace('*', '').replace('^', '').strip()
 
-            races.append(Race(race, series, dt, 'FloRacing'))
-
-    return races
-
-
-def process_wec(url: str, series: Series) -> list:
-    """Fetch race schedule from fiawec.com"""
-    races = []
-
-    parts = url.split('/')
-    index = int(parts[-1])
-    base = '/'.join(parts[:-1])
-
-    while True:
-        req = Request(f'{base}/{index}', headers=HEADERS)
-        try:
-            page = urlopen(req)
-            html = page.read().decode("utf-8")
-            soup = BeautifulSoup(html, "html.parser")
-
-            race = soup.find('h2', class_='premain-first-container-title')['title']
-            times = soup.find_all('span', class_='race-date-js')
-
-            # wec removes times from completed races
-            if len(times) > 1:
-                time = int(times[-2]['data-timestamp'])
-
-                dt = datetime.fromtimestamp(time).astimezone(TIME_ZONE)
-                races.append(Race(race, series, dt, 'Max'))
-        except HTTPError:
-            break
-
-        index += 1
+            races.append(Race(race, key, dt, 'FloRacing'))
 
     return races
 
 
-def process_nascar_nationals() -> list:
+def process_nascar_nationals(ar: AnyRaces, key: str) -> list:
     """Fetch official national NASCAR series' schedules from NASCAR.com."""
-    page = urlopen(f'https://cf.nascar.com/cacher/{datetime.now().year}/race_list_basic.json')
+    series_tab = {
+        'NCS': 'series_1',
+        'NOAPS': 'series_2',
+        'NCTS': 'series_3'
+    }
+
+    series = ar.series[key]
+    page = urlopen(series.schedule_url)
     data = json.load(page)
 
+    if key not in series_tab or series_tab[key] not in data:
+        return []
+
+    def fromisoformat(date: str):
+        return datetime.fromisoformat(date).replace(tzinfo=tz.gettz('America/New_York')).astimezone(ar.time_zone)
+
     races = []
-    for s in data:
-        if s == 'series_1':
-            series = Series('NCS', 'https://www.espn.com/racing/schedule', ['NASCAR', 'Stock', 'Premier'])
-        elif s == 'series_2':
-            series = Series('NXS', 'https://www.espn.com/racing/schedule/_/series/xfinity', ['NASCAR', 'Stock'])
-        elif s == 'series_3':
-            series = Series('NCTS', 'https://www.espn.com/racing/schedule/_/series/camping', ['NASCAR', 'Stock'])
-        else:
-            continue
+    for r in data[series_tab[key]]:
+        name = r['race_name'].replace('NASCAR ', '').replace('CRAFTSMAN Truck Series ', '').replace('O\'Reilly Auto Parts Series ', '').replace('Race at ', '')
+        if ' by ' in name:
+            words = name.split()
+            name = ' '.join(words[:words.index('by') - 1])
 
-        def fromisoformat(date: str):
-            return datetime.fromisoformat(date).replace(tzinfo=tz.gettz('America/New_York')).astimezone(TIME_ZONE)
-
-        races += [Race(r['race_name'], series, fromisoformat(r['race_date']), r['television_broadcaster']) for r in data[s]]
+        races.append(Race(name, key, fromisoformat(r['race_date']), r['television_broadcaster']))
 
     return races
 
 
-def fetch_races():
+def generate_races(ar, key):
+    """Generate the list of races by processing data from the given URL."""
+    races = []
+    schedule_url = ar.series[key].schedule_url
+    if 'cf.nascar.com' in schedule_url:
+        races = process_nascar_nationals(ar, key)
+    elif 'espn.com/racing' in schedule_url:
+        races = process_espn_racing(ar, key)
+    elif 'espn.com/f1' in schedule_url:
+        races = process_espn_f1(ar, key)
+    elif 'indycar.com' in schedule_url:
+        races = process_indy(ar, key)
+    elif 'imsa.com' in schedule_url:
+        races = process_imsa(ar, key)
+    elif 'arcaracing.com' in schedule_url:
+        races = process_arca(ar, key)
+    elif 'nascar.ca' in schedule_url:
+        races = process_nascar_ca(ar, key)
+    elif 'nascar.com' in schedule_url and 'modified' in schedule_url:
+        races = process_nascar_mod(ar, key)
+
+    return races
+
+
+def fetch_races(ar):
     # build a list of races from each series
     races = []
-    for l in series:
+    for k in ar.series:
+        name = ar.series[k].name
         try:
-            l.generate_races()
-            races.extend(l.races)
+            races.extend(generate_races(ar, k))
         except HTTPError:
-            print(f'Unable to fetch {l.name}')
-        except:
-            print(f'Unable to scrape {l.name}')
+            print(f'Unable to fetch {name}')
+        except Exception as e:
+            print(f'Unable to scrape {name}:', e)
 
-    races += process_nascar_nationals()
+    print('Fetched', len(races), 'total races')
+    return races
 
-    # sort the races by time
-    races.sort(key=lambda r: r.time)
 
-    # pull content from data/ files to prepend
-    prepend = ''
-    for file in glob.glob(f'{DATA_DIR}/*.csv'):
-        prepend += open(file, 'r').read()
-        if not prepend.endswith('\n'):
-            prepend += '\n'
+def merge_races(old_races, new_races):
+    # merge with the existing races
+    merged_races = new_races.copy()
+    for race in old_races:
+        matches = [r for r in new_races if r == race]
+        if not matches:
+            merged_races.append(race)
+            print('Restoring', race.series, race.name)
+        elif matches[0].time != race.time:
+            print(race.series, race.name, 'updated from', race.time, 'to', matches[0].time)
 
-    # write the races to CSV file
-    with open(RACES_FILE, 'w') as f:
-        f.write(prepend)
-        f.write('\n'.join([r.build_row() for r in races]))
-
-    print('Fetched', len(races), 'races')
+    print('Merged into', len(merged_races), 'total races')
+    return merged_races
 
 
 if __name__ == '__main__':
-    fetch_races()
+    ar = AnyRaces()
+    ar.read_config()
+
+    races = ar.read_manual_entries()
+    races += fetch_races(ar)
+    races.sort(key=lambda r: r.time)
+
+    old_races = ar.read_races()
+    races = merge_races(old_races, races)
+
+    ar.write_races(races)

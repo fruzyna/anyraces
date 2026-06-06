@@ -28,7 +28,7 @@ function update_time()
         {
             let server = new Date(`${now.getFullYear()}/${date.innerText} ${time.innerText}`)
             update_time = local - server !== 0
-            document.getElementById('disclaimer').style.display = 'none'
+            document.getElementById('disclaimer').innerText = 'Red = started < 3 hours; Yellow = starting < 1 hour'
         }
         // update time if timezone differs
         if (update_time)
@@ -48,6 +48,7 @@ function update_time()
             el.getElementsByClassName('race')[0].classList.add('live')
         }
     }
+    console.log('Time update complete')
 }
 
-update_time()
+window.addEventListener('load', update_time)
