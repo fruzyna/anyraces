@@ -1,0 +1,94 @@
+{
+    "time_zone": "America/Chicago",
+    "race_cache_file": "races.csv",
+    "manual_entries_dir": "data",
+    "series": {
+        "NCS": {
+            "name": "NASCAR Cup Series",
+            "source": "https://cf.nascar.com/cacher/YEAR/race_list_basic.json",
+            "tags": ["NASCAR", "Stock", "American", "Premier"],
+            "enabled": true
+        },
+        "NOAPS": {
+            "name": "NASCAR O'Reilly Auto Parts Series",
+            "source": "https://cf.nascar.com/cacher/YEAR/race_list_basic.json",
+            "tags": ["NASCAR", "Stock", "American"],
+            "enabled": true
+        },
+        "NCTS": {
+            "name": "NASCAR Craftsman Truck Series",
+            "source": "https://cf.nascar.com/cacher/YEAR/race_list_basic.json",
+            "tags": ["NASCAR", "Stock", "American"],
+            "enabled": true
+        },
+        "NWMT": {
+            "name": "NASCAR Whelen Modified Tour",
+            "source": "https://www.nascar.com/nascar-whelen-modified-tour-schedule/",
+            "tags": ["NASCAR"],
+            "enabled": true
+        },
+        "NPS": {
+            "name": "NASCAR Pinty's Series (Canada)",
+            "source": "https://www.nascar.ca/schedule/",
+            "tags": ["NASCAR", "Stock", "International"],
+            "enabled": true
+        },
+        "ARCA": {
+            "name": "ARCA Menards Series",
+            "source": "https://www.arcaracing.com/2024-race-broadcast-schedule/",
+            "tags": ["NASCAR", "Stock", "American"],
+            "enabled": true
+        },
+        "INDY": {
+            "name": "NTT IndyCar Series",
+            "source": "https://www.espn.com/racing/schedule/_/series/indycar",
+            "tags": ["IndyCar", "Open-Wheel", "American", "Premier"],
+            "enabled": true
+        },
+        "NXT": {
+            "name": "Indy NXT Series",
+            "source": "https://www.indycar.com/INDYNXT/Schedule",
+            "tags": ["IndyCar", "Open-Wheel", "American"],
+            "enabled": true
+        },
+        "F1": {
+            "name": "Formula 1",
+            "source": "https://www.espn.com/f1/schedule",
+            "tags": ["FIA", "Open-Wheel", "International", "Premier"],
+            "enabled": true
+        },
+        "WTSC": {
+            "name": "IMSA WeatherTech SportsCar Championship",
+            "source": "https://www.imsa.com/weathertech/tv-streaming-schedule/",
+            "tags": ["IMSA", "SportsCar", "American", "Premier"],
+            "enabled": true
+        },
+        "PILOT": {
+            "name": "IMSA Michelin Pilot Challenge",
+            "source": "https://www.imsa.com/michelinpilotchallenge/tv-streaming-schedule/",
+            "tags": ["IMSA", "SportsCar", "American"],
+            "enabled": true
+        },
+        "MX5": {
+            "name": "Whelen Mazda MX-5 Cup",
+            "source": "",
+            "tags": ["IMSA", "SportsCar", "American"],
+            "enabled": true
+        }
+    },
+    "streams": {
+        "FOX": "https://stream.fruzyna.net/web/#/details?id=360735ee93cd312734f45ecc5fe9c06c",
+        "FS1": "https://www.fox.com/live/channels",
+        "FS2": "https://www.fox.com/live/channels",
+        "NBC": "https://stream.fruzyna.net/web/#/details?id=c5eec3a0f756dc266f8ccb4155d5177a",
+        "USA": "",
+        "Peacock": "https://www.peacocktv.com/watch/sports/highlights",
+        "CW": "https://stream.fruzyna.net/web/#/details?id=f0338991ae98e56c7b4e6309791c77b0",
+        "PRIMEVIDEO": "https://www.primevideo.com/sports",
+        "TNT": "https://www.hbomax.com/",
+        "AppleTV": "https://tv.apple.com/us/channel/formula-1/tvs.sbd.241000",
+        "FloRacing": "https://www.floracing.com/events",
+        "YouTube": "https://www.youtube.com",
+        "IMSAtv": "https://www.imsa.com/tvlive/"
+    }
+}
