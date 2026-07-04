@@ -102,5 +102,9 @@ class Race(object):
         return f'<tr class="row {ar.series[self.series].tags}"><td class="race">{self.name}</td><td class="series {self.series}" title="{title}">{self.series}</td><td class="date">{self.time.strftime("%m/%d")}</td><td class="time">{self.time.strftime("%H:%M")}</td><td class="channel">{channel}</td></tr>'
 
     def __eq__(self, race):
-        """Ony compare races by series and name. Overlaps do happen in some series."""
-        return self.name == race.name and self.series == race.series and self.time.month == race.time.month
+        """
+        Ony compare races by series, name, and date.
+        Attempts to account for name and time changes (< 48 hrs).
+        Overlaps do happen in some series.
+        """
+        return self.series == race.series and (self.time == race.time or (self.name == race.name and abs((self.time - race.time).total_seconds()) < 48 * 60 * 60))
