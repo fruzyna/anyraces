@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse, FileResponse
+from contextlib import asynccontextmanager
 from datetime import datetime, date, timedelta
 from threading import Thread
 from time import sleep
@@ -15,6 +16,7 @@ class UpdateThread(Thread):
         super().__init__()
         self.races = []
         self.last_update = datetime.now()
+        self.running = False
 
     def run(self):
         ar.read_config()
@@ -22,16 +24,25 @@ class UpdateThread(Thread):
         manual_races = ar.read_manual_entries()
         self.races = merge_races(old_races, manual_races)
 
-        while True:
+        self.running = True
+        while self.running:
             races = fetch_races(ar)
             self.last_update = datetime.now()
             self.races = merge_races(self.races, races)
             ar.write_races(self.races)
-            sleep(8 * 60 * 60)
+
+            # sleep for 8 hours but allow escaping
+            for _ in range(8 * 60 * 60):
+                sleep(1)
+                if not self.running:
+                    break
 
     def wait_for_races(self):
         while not self.races:
             sleep(1)
+
+    def shutdown(self):
+        self.running = False
 
 
 def lookup_tag(tag: str):
@@ -44,13 +55,19 @@ def build_tag(timeframe: str, tag: str) -> str:
     return f'<a href="/?timeframe={timeframe}&tag={tag}" title="{lookup_tag(tag)}">{tag}</a>'
 
 
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    yield
+    thread.shutdown()
+
+
 ar = AnyRaces()
 
 thread = UpdateThread()
 thread.start()
 thread.wait_for_races()
 
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 
 
 # build index to select line and stop
